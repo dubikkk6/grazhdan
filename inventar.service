@@ -5,11 +5,11 @@ After=network.target
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/root/Finance-Bot
-ExecStart=/root/Finance-Bot/.venv/bin/python main.py
+WorkingDirectory=/root/grazhdan
+ExecStart=/root/grazhdan/venv/bin/python -m app
 Restart=on-failure
 RestartSec=5
-EnvironmentFile=/root/Finance-Bot/.env
+EnvironmentFile=/root/grazhdan/.env
 
 [Install]
 WantedBy=multi-user.target
