@@ -1,0 +1,15 @@
+[Unit]
+Description=Inventar Bot
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/Finance-Bot
+ExecStart=/root/Finance-Bot/.venv/bin/python main.py
+Restart=on-failure
+RestartSec=5
+EnvironmentFile=/root/Finance-Bot/.env
+
+[Install]
+WantedBy=multi-user.target
