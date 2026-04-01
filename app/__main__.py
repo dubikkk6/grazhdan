@@ -8,7 +8,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 
 from app.config import load_settings
 from app.db import Database
-from app.handlers import admin, menu, move, objects, tools
+from app.handlers import admin, menu, move, objects, search, tools
 from app.middlewares import InjectMiddleware
 
 
@@ -29,6 +29,7 @@ async def main() -> None:
     dp.include_router(tools.router)
     dp.include_router(objects.router)
     dp.include_router(move.router)
+    dp.include_router(search.router)
     dp.include_router(admin.router)
 
     await dp.start_polling(bot)
