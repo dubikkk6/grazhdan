@@ -13,6 +13,7 @@ def main_menu_kb(is_admin: bool) -> ReplyKeyboardMarkup:
     b.row(KeyboardButton(text="2. Инструменты + номер"))
     b.row(KeyboardButton(text="3. Объекты"))
     b.row(KeyboardButton(text="4. Перемещение инструмента"))
+    b.row(KeyboardButton(text="5. Поиск по инвентарному номеру"))
     return b.as_markup(resize_keyboard=True, selective=True)
 
 
