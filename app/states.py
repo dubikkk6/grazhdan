@@ -8,6 +8,10 @@ class MoveToolFlow(StatesGroup):
     confirm = State()
 
 
+class SearchBySerialFlow(StatesGroup):
+    serial = State()
+
+
 class AdminAddTool(StatesGroup):
     name = State()
     serial = State()
