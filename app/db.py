@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -84,6 +84,13 @@ class Database:
                     FOREIGN KEY(to_object_id) REFERENCES objects(id) ON DELETE SET NULL,
                     FOREIGN KEY(moved_by_tg_id) REFERENCES users(tg_id) ON DELETE CASCADE
                 );
+                """
+            )
+            await db.execute(
+                """
+                UPDATE tools
+                SET current_object_id = NULL
+                WHERE is_active = 0 AND current_object_id IS NOT NULL;
                 """
             )
             await db.commit()
@@ -251,7 +258,13 @@ class Database:
 
     async def set_tool_active(self, tool_id: int, is_active: bool) -> None:
         async with self.connect() as db:
-            await db.execute("UPDATE tools SET is_active=? WHERE id=?;", (int(is_active), tool_id))
+            if is_active:
+                await db.execute("UPDATE tools SET is_active=1 WHERE id=?;", (tool_id,))
+            else:
+                await db.execute(
+                    "UPDATE tools SET is_active=0, current_object_id=NULL WHERE id=?;",
+                    (tool_id,),
+                )
             await db.commit()
 
     # ---- objects ----
@@ -293,25 +306,25 @@ class Database:
             r = await cur.fetchone()
             return Obj(id=int(r["id"]), name=str(r["name"])) if r else None
 
-    # 👇 НОВЫЙ МЕТОД - добавлен сюда, после get_object
+    # рџ‘‡ РќРћР’Р«Р™ РњР•РўРћР” - РґРѕР±Р°РІР»РµРЅ СЃСЋРґР°, РїРѕСЃР»Рµ get_object
     async def delete_object(self, object_id: int) -> tuple[bool, str]:
         """
-        Удаляет объект, если он не содержит инструментов.
+        РЈРґР°Р»СЏРµС‚ РѕР±СЉРµРєС‚, РµСЃР»Рё РѕРЅ РЅРµ СЃРѕРґРµСЂР¶РёС‚ РёРЅСЃС‚СЂСѓРјРµРЅС‚РѕРІ.
         
         Returns:
             (success: bool, message: str)
         """
         async with self.connect() as db:
-            # Проверяем, есть ли инструменты на этом объекте
+            # РџСЂРѕРІРµСЂСЏРµРј, РµСЃС‚СЊ Р»Рё РёРЅСЃС‚СЂСѓРјРµРЅС‚С‹ РЅР° СЌС‚РѕРј РѕР±СЉРµРєС‚Рµ
             cur = await db.execute(
-                "SELECT COUNT(*) as cnt FROM tools WHERE current_object_id = ?;",
+                "SELECT COUNT(*) as cnt FROM tools WHERE current_object_id = ? AND is_active = 1;",
                 (object_id,)
             )
             row = await cur.fetchone()
             if row and row["cnt"] > 0:
-                return False, f"Нельзя удалить: на объекте находится {row['cnt']} инструмент(ов). Сначала переместите их."
+                return False, f"РќРµР»СЊР·СЏ СѓРґР°Р»РёС‚СЊ: РЅР° РѕР±СЉРµРєС‚Рµ РЅР°С…РѕРґРёС‚СЃСЏ {row['cnt']} РёРЅСЃС‚СЂСѓРјРµРЅС‚(РѕРІ). РЎРЅР°С‡Р°Р»Р° РїРµСЂРµРјРµСЃС‚РёС‚Рµ РёС…."
             
-            # Проверяем, используется ли объект в истории перемещений
+            # РџСЂРѕРІРµСЂСЏРµРј, РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ Р»Рё РѕР±СЉРµРєС‚ РІ РёСЃС‚РѕСЂРёРё РїРµСЂРµРјРµС‰РµРЅРёР№
             cur = await db.execute(
                 "SELECT COUNT(*) as cnt FROM moves WHERE from_object_id = ? OR to_object_id = ?;",
                 (object_id, object_id)
@@ -319,14 +332,14 @@ class Database:
             row = await cur.fetchone()
             has_history = row and row["cnt"] > 0
             
-            # Удаляем объект
+            # РЈРґР°Р»СЏРµРј РѕР±СЉРµРєС‚
             await db.execute("DELETE FROM objects WHERE id = ?;", (object_id,))
             await db.commit()
             
             if has_history:
-                return True, "Объект удалён. Примечание: он остался в истории перемещений (согласно настройкам внешних ключей)."
+                return True, "РћР±СЉРµРєС‚ СѓРґР°Р»С‘РЅ. РџСЂРёРјРµС‡Р°РЅРёРµ: РѕРЅ РѕСЃС‚Р°Р»СЃСЏ РІ РёСЃС‚РѕСЂРёРё РїРµСЂРµРјРµС‰РµРЅРёР№ (СЃРѕРіР»Р°СЃРЅРѕ РЅР°СЃС‚СЂРѕР№РєР°Рј РІРЅРµС€РЅРёС… РєР»СЋС‡РµР№)."
             else:
-                return True, "Объект успешно удалён."
+                return True, "РћР±СЉРµРєС‚ СѓСЃРїРµС€РЅРѕ СѓРґР°Р»С‘РЅ."
 
     # ---- move tool ----
     async def move_tool(
